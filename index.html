@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Murad Almahrous — Portfolio</title>
+<meta name="description" content="Murad Almahrous — IT Operations, Application Specialist. Retro 80s sci-fi terminal style portfolio."/>
+<style>
+  /* Basic reset */
+  *{box-sizing:border-box;margin:0;padding:0}
+  /* Crucial for full screen and consistent mobile viewport */
+  html,body{height:100%; width:100%;}
+  body{
+    background:#000; color:#7CFC00; font-family: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    overflow-x:hidden;
+  }
+
+  /* Fullscreen terminal container */
+  .terminal-wrap{
+    /* Use the custom variable for height: 100 * --vh */
+    height: 100vh; /* Fallback for browsers that don't support --vh */
+    height: calc(var(--vh, 1vh) * 100);
+    min-height: 100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:16px; /* Reduced padding slightly for mobile */
+    background:
+      radial-gradient(1200px 400px at 10% 20%, rgba(0,220,120,0.03), transparent 10%),
+      linear-gradient(180deg, rgba(0,0,0,0.98), rgba(3,3,3,0.995));
+  }
+
+  /* Terminal window */
+  .terminal{
+    width:100%; /* Ensure it always takes full width within the wrap */
+    max-width:1400px; /* Slightly increased max-width for large screens */
+    background:linear-gradient(180deg, rgba(0, 12, 8, 0.85), rgba(0,0,0,0.98));
+    border:1px solid rgba(124,252,0,0.06);
+    box-shadow: 0 40px 120px rgba(0,255,130,0.03), inset 0 0 120px rgba(124,252,0,0.02);
+    border-radius:10px;
+    padding:16px; /* Reduced padding slightly */
+    position:relative;
+    overflow:hidden;
+  }
+  
+  /* Make the content wrapper take full height minus terminal padding */
+  #terminal-content {
+      height: calc(100% - 32px); /* 100% minus top/bottom padding of .terminal */
+      display: flex; /* Use flex to align children */
+      flex-direction: column; /* Stack children vertically */
+  }
+
+  /* subtle scanlines */
+  .terminal:after{
+    content:"";
+    pointer-events:none;
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size:100% 4px;
+    mix-blend-mode:overlay;
+    opacity:0.9;
+  }
+
+  /* header bar */
+  .term-header{display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid rgba(124,252,0,0.06); flex-wrap: wrap;}
+  .led{width:10px;height:10px;border-radius:3px;background:#0f0;box-shadow:0 0 8px rgba(124,252,0,0.8)}
+  .term-title{color:#BFFFBF;font-weight:700;font-size:14px;letter-spacing:1px}
+  .term-sub{color:#9fe39f;font-size:11px;margin-left:8px;opacity:0.75}
+
+  /* layout: left tabs, right output */
+  .term-body{
+    display:grid;
+    grid-template-columns:300px 1fr;
+    gap:18px;
+    padding:18px;
+    /* CRITICAL CHANGE: Ensure body uses remaining vertical space */
+    flex-grow: 1; 
+    overflow: hidden; /* Prevent internal scrolling here */
+  }
+
+  @media (max-width:880px){
+    /* Stack columns on mobile */
+    .term-body{
+        grid-template-columns:1fr;
+        gap:12px;
+        padding:12px;
+        height: auto; /* Allow stacking to define height on mobile */
+    }
+  }
+
+  /* left pane — terminal "tabs" and portrait */
+  .left-pane{
+    background:rgba(0,10,7,0.25);
+    border:1px solid rgba(124,252,0,0.03);
+    padding:14px;border-radius:8px;
+    height:100%; /* IMPORTANT: Makes left pane fill height of .term-body on desktop */
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .portrait-frame{
+    height:220px;border-radius:6px;background:linear-gradient(180deg, rgba(0,15,10,0.55), rgba(0,0,0,0.6));
+    border:1px solid rgba(124,252,0,0.06);display:flex;align-items:center;justify-content:center;overflow:hidden;
+    box-shadow: inset 0 0 40px rgba(0,255,140,0.02);
+  }
+  .portrait-frame img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position: top; /* <--- ADDED THIS LINE */
+    filter:grayscale(20%) contrast(0.95) saturate(0.6) hue-rotate(-20deg);
+    mix-blend-mode:screen
+  }
+  .term-name{margin-top:8px;color:#BFFFBF;font-weight:800;font-size:18px;letter-spacing:0.6px;text-align:center}
+  .term-role{color:#9fe39f;text-align:center;margin-top:4px;font-size:12px;opacity:0.9}
+
+  .tabs{
+    margin-top:10px;display:flex;flex-direction:column;gap:8px;
+  }
+  .tab{
+    background:linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.05));
+    color:#9fe39f;padding:10px 12px;border-radius:6px;border-left:3px solid rgba(0,0,0,0.2);
+    cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;
+  }
+  .tab.active{background:linear-gradient(90deg, rgba(0,20,10,0.6), rgba(0,0,0,0.2));box-shadow:inset 0 0 40px rgba(0,255,140,0.015);border-left:4px solid #39ff9b;color:#eaffef}
+
+  .tab kbd{background:#07120A;color:#aafca6;padding:3px 6px;border-radius:4px;border:1px solid rgba(124,252,0,0.06);font-weight:700;font-size:11px}
+
+  /* right pane — output area */
+  .output{
+    background: radial-gradient(1200px 300px at 75% 10%, rgba(0,200,120,0.02), transparent 15%), rgba(0,0,0,0.0);
+    border-radius:8px;padding:18px;
+    height: 100%; /* Use 100% of the available height in the grid cell */
+    overflow:auto;
+    border:1px solid rgba(124,252,0,0.03);
+  }
+  .output .line{font-size:14px;line-height:1.5;white-space:pre-wrap;color:#bfffbf}
+  .prompt{color:#8dff8d;font-weight:700}
+  .cmd{color:#8dff8d}
+  .out-text{color:#d9ffd9;margin-left:6px}
+  .ascii-banner{font-family:monospace;color:#9ffdb3;font-size:10px;line-height:1;margin-bottom:8px;white-space:pre;}
+
+  /* accent boxes */
+  .box{
+    border:1px dashed rgba(124,252,0,0.05);padding:10px;border-radius:6px;margin-top:10px;color:#bfffbf;background:linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,20,10,0.02));
+  }
+
+  /* small details: scanline glow on active */
+  .glow{
+    text-shadow:0 0 8px rgba(124,252,0,0.18), 0 0 20px rgba(124,252,0,0.06);
+    filter: drop-shadow(0 4px 12px rgba(0,255,150,0.02));
+  }
+
+  /* faux CRT flicker animation (subtle) */
+  @keyframes crtFlicker {
+    0% { opacity: 1; }
+    2% { opacity: 0.96; }
+    8% { opacity: 0.98; }
+    10% { opacity: 0.93; }
+    20% { opacity: 0.99; }
+    100% { opacity: 1; }
+  }
+  .terminal{animation:crtFlicker 3s linear infinite;}
+
+  /* typewriter cursor */
+  .cursor{display:inline-block;width:10px;height:18px;background:#7CFC00;margin-left:6px;vertical-align:middle;animation:blink 1s steps(2,start) infinite;border-radius:2px}
+  @keyframes blink{50%{opacity:0}}
+
+  /* responsive smaller outputs */
+  @media (max-width:880px){
+    .portrait-frame{height:180px}
+    .output{height:auto; min-height: 280px; padding: 12px;}
+    .terminal{padding: 12px;}
+    .term-header{padding: 4px 8px;}
+    .ascii-banner{font-size: 8px;}
+  }
+
+  /* subtle scrollbar style */
+  .output::-webkit-scrollbar{width:8px}
+  .output::-webkit-scrollbar-thumb{background:rgba(124,252,0,0.06);border-radius:8px}
+</style>
+</head>
+<body>
+  <div class="terminal-wrap">
+    <div class="terminal" role="application" aria-label="Retro terminal portfolio">
+      
+      <div id="initial-name-line" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; z-index: 10;">
+        </div>
+      
+      <div id="terminal-content" style="opacity:0;"> 
+        <div class="term-header">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="led" aria-hidden="true"></div>
+            <div class="term-title">MURAD@CORE-SYS</div>
+            <div class="term-sub">/portfolio — terminal</div>
+          </div>
+          <div style="margin-left:auto;font-size:12px;color:#8fe79a;opacity:0.9">STATUS: <span style="color:#bfffbf">ONLINE</span></div>
+        </div>
+
+        <div class="term-body">
+          <div class="left-pane" role="navigation" aria-label="Navigation tabs">
+            <div class="portrait-frame" title="Murad Almahrous photo">
+              <img src="assets/Murad.jpg" alt="Murad Almahrous">
+            </div>
+            <div class="term-name">MURAD ALMAHROUS</div>
+            <div class="term-role">IT Ops • Application Specialist • Cloud & Infra</div>
+
+            <div class="tabs" id="tabs-container" aria-hidden="false">
+              <div class="tab active" data-tab="about"><kbd>>></kbd> ABOUT</div>
+              <div class="tab" data-tab="resume"><kbd>>></kbd> RESUME</div>
+              <div class="tab" data-tab="skills"><kbd>>></kbd> SKILLS</div>
+              <div class="tab" data-tab="projects"><kbd>>></kbd> PROJECTS</div>
+              <div class="tab" data-tab="contact"><kbd>>></kbd> CONTACT</div>
+            </div>
+
+            <div style="margin-top:auto;font-size:12px;color:#9fe39f;opacity:0.9">
+              Tip: Press a tab or type <span style="color:#d7ffd7">help</span> to see commands
+            </div>
+          </div>
+
+          <div class="output" id="output" role="document" tabindex="0" aria-live="polite">
+            <div class="ascii-banner glow" id="banner">
+ /$$      /$$                                    /$$        /$$$$$$  /$$                         /$$                                              
+| $$$    /$$$                                   | $$       /$$__  $$| $$                        | $$                                              
+| $$$$  /$$$$ /$$   /$$  /$$$$$$  /$$$$$$   /$$$$$$$      | $$  \ $$| $$ /$$$$$$/$$$$   /$$$$$$ | $$$$$$$   /$$$$$$   /$$$$$$  /$$   /$$  /$$$$$$$
+| $$ $$/$$ $$| $$  | $$ /$$__  $$|____  $$ /$$__  $$      | $$$$$$$$| $$| $$_  $$_  $$ |____  $$| $$__  $$ /$$__  $$ /$$__  $$| $$  | $$ /$$_____/
+| $$  $$$| $$| $$  | $$| $$  \__/ /$$$$$$$| $$  | $$      | $$__  $$| $$| $$ \ $$ \ $$  /$$$$$$$| $$  \ $$| $$  \__/| $$  \ $$| $$  | $$|  $$$$$$ 
+| $$\  $ | $$| $$  | $$| $$      /$$__  $$| $$  | $$      | $$  | $$| $$| $$ | $$ | $$ /$$__  $$| $$  | $$| $$      | $$  | $$| $$  | $$ \____  $$
+| $$ \/  | $$|  $$$$$$/| $$     |  $$$$$$$|  $$$$$$$      | $$  | $$| $$| $$ | $$ | $$|  $$$$$$$| $$  | $$| $$      |  $$$$$$/|  $$$$$$/ /$$$$$$$/
+|__/     |__/ \______/ |__/      \_______/ \_______/      |__/  |__/|__/|__/ |__/ |__/ \_______/|__/  |__/|__/       \______/  \______/ |_______/ 
+                                                                                                                                                  
+                                                                                                                                                    
+            </div>
+
+            <div class="line"><span class="prompt">> </span><span class="cmd">init --profile murad</span></div>
+            <div class="line out-text" id="intro-output">Initializing profile... <span class="cursor" id="main-cursor"></span></div>
+
+            <div id="dynamic-area" style="margin-top:14px"></div>
+
+            <div class="box" id="cmd-hints" style="margin-top:16px">
+              <div style="font-weight:700;color:#dfffdc">Available commands:</div>
+              <div style="margin-top:8px;color:#cfffcf">help &nbsp;&nbsp; show &nbsp;&nbsp; about &nbsp;&nbsp; resume &nbsp;&nbsp; skills &nbsp;&nbsp; projects &nbsp;&nbsp; contact</div>
+              <div style="margin-top:8px;color:#bfffbf;font-size:12px">You can also click the left tabs to run the same commands.</div>
+            </div>
+            
+            <div class="line" id="permanent-input-line">
+                <span class="prompt">> </span><span class="cmd" id="command-typing-area"></span><span class="cursor"></span>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+      </div>
+  </div>
+
+<script>
+/* Retro Terminal Portfolio JS
+   - Tabs control content
+   - Typewriter-style outputs
+   - "Commands" emulate terminal behavior
+   - Dynamic 100vh fix for mobile
+*/
+
+/* Data (pulled from your resume file and previous inputs) */
+const profile = {
+  name: "Murad Almahrous",
+  title: "IT Operations • Application Specialist • Cloud & Infra",
+  location: "Dubai, UAE",
+  email: "murad.almahrous@gmail.com",
+  phone: "Available upon request (email me!)",
+  resumePath: "assets/resume.pdf",
+  about: [
+    "Experienced IT Operations Specialist with 10+ years supporting applications, administering networks, automating operations, and maintaining on-prem and cloud platforms.",
+    "I enjoy diagnosing hard problems, streamlining releases, and making infrastructure reliable for users and customers."
+  ],
+  experience: [
+    { role: "IT Operations Lead — Manteq Systems", date: "Mar 2023 – Present", text: "Lead the support team, managed Azure & AWS IaaS, AD, Hyper-V, SonicWall, backups, and customer escalations." },
+    { role: "Implementation Specialist", date: "Dec 2019 – Feb 2023", text: "Managed DOH IPP deployments across 16 enterprise sites, releases, SQL reporting, API & EDI integrations." },
+    { role: "System Administrator — Al-Awael Group", date: "Jul 2018 – Nov 2019", text: "Managed servers, AD, Exchange upgrades, backups and on-prem infrastructure for ~50 users." }
+  ],
+  skills: [
+    "Windows Server", "Active Directory", "Hyper-V", "SonicWall", "Azure", "AWS (EC2, RDS)", "M365 / Entra ID / Intune",
+    "SQL Server", "API / EDI", "Jira / Redmine", "ITIL", "Backups / NAS"
+  ],
+  projects: [
+    { title: "DOH IPP project", desc: "Primary technical contact for deployments in 16 enterprise environments; integrations and release management." },
+    { title: "API & EDI automation", desc: "Designed integrations that automated thousands of transactions and improved billing accuracy." }
+  ]
+};
+
+/* DOM refs */
+const tabs = document.querySelectorAll('.tab');
+const tabsContainer = document.getElementById('tabs-container');
+const output = document.getElementById('output');
+const dynamicArea = document.getElementById('dynamic-area');
+const introOutput = document.getElementById('intro-output');
+const banner = document.getElementById('banner');
+const mainCursor = document.getElementById('main-cursor');
+
+// REFS for staged initialization and permanent input
+const terminalContent = document.getElementById('terminal-content');
+const bootContainer = document.getElementById('initial-name-line'); // Renamed initialNameLine to bootContainer
+const commandTypingArea = document.getElementById('command-typing-area'); 
+
+
+/* Escape helper */
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; });
+}
+
+
+/* Typewriter utility - Used for terminal output and startup lines */
+function typeText(targetEl, text, speed=22, cb) {
+  targetEl.innerHTML = '';
+  let i = 0;
+  function step(){
+    if(i <= text.length){
+      // NOTE: Using a temporary cursor for the startup text
+      targetEl.innerHTML = escapeHtml(text.slice(0,i)) + (i % 2 ? '<span class="cursor"></span>' : '<span class="cursor" style="opacity:0.4"></span>');
+      i++;
+      setTimeout(step, speed);
+    } else {
+      targetEl.innerHTML = escapeHtml(text);
+      if(cb) setTimeout(cb, 280);
+    }
+  }
+  step();
+}
+
+/* New Typewriter utility for the sequential boot screen */
+function typeBootLine(containerEl, text, speed=50, cb) {
+  const lineEl = document.createElement('div');
+  lineEl.className = 'line';
+  lineEl.innerHTML = '<span class="prompt">> </span><span class="cmd"></span>';
+  containerEl.appendChild(lineEl);
+  
+  const textEl = lineEl.querySelector('.cmd');
+
+  let i = 0;
+  function step(){
+    if(i <= text.length){
+      textEl.innerHTML = escapeHtml(text.slice(0,i)) + (i % 2 ? '<span class="cursor"></span>' : '<span class="cursor" style="opacity:0.4"></span>');
+      i++;
+      setTimeout(step, speed);
+    } else {
+      textEl.innerHTML = escapeHtml(text);
+      if(cb) setTimeout(cb, 280);
+    }
+  }
+  step();
+}
+
+
+/* Simple append line */
+function appendLine(html) {
+  const el = document.createElement('div');
+  el.className = 'line';
+  el.innerHTML = html;
+  dynamicArea.appendChild(el);
+  // auto-scroll
+  output.scrollTop = output.scrollHeight;
+}
+
+/* Clear dynamic area */
+function clearDynamic() {
+  dynamicArea.innerHTML = '';
+}
+
+/* Render content for each tab (Logic unchanged) */
+function showAbout() {
+  clearDynamic();
+  appendLine('<span class="prompt">> </span><span class="cmd">show about</span>');
+  profile.about.forEach((p, idx) => {
+    const el = document.createElement('div');
+    el.className = 'line out-text';
+    el.style.marginTop = '8px';
+    el.textContent = p;
+    dynamicArea.appendChild(el);
+  });
+  appendLine('<div class="box">Location: ' + profile.location + '  ·  Email: ' + profile.email + '  ·  Phone: ' + profile.phone + '</div>');
+}
+
+function showResume() {
+  clearDynamic();
+  appendLine('<span class="prompt">> </span><span class="cmd">open resume</span>');
+  appendLine('<div class="out-text">Resume available at: <a style="color:#cfffcf" href="' + profile.resumePath + '" target="_blank">Download PDF</a></div>');
+  profile.experience.forEach(exp=>{
+    appendLine('<div class="line out-text" style="margin-top:8px"><strong>' + exp.role + '</strong> <span style="color:#9fe39f">• ' + exp.date + '</span>\n' + exp.text + '</div>');
+  });
+}
+
+function showSkills() {
+  clearDynamic();
+  appendLine('<span class="prompt">> </span><span class="cmd">list skills</span>');
+  const chunkSize = 6;
+  for(let i=0;i<profile.skills.length;i+=chunkSize){
+    const chunk = profile.skills.slice(i,i+chunkSize).join('  ·  ');
+    appendLine('<div class="line out-text" style="margin-top:8px">' + chunk + '</div>');
+  }
+}
+
+function showProjects() {
+  clearDynamic();
+  appendLine('<span class="prompt">> </span><span class="cmd">show projects</span>');
+  profile.projects.forEach(proj=>{
+    appendLine('<div class="line out-text" style="margin-top:8px"><strong>' + proj.title + '</strong>\n' + proj.desc + '</div>');
+  });
+}
+
+function showContact() {
+  clearDynamic();
+  appendLine('<span class="prompt">> </span><span class="cmd">contact info</span>');
+  appendLine('<div class="line out-text" style="margin-top:8px">Email: ' + profile.email + '</div>');
+  appendLine('<div class="line out-text">Phone: ' + profile.phone + '</div>');
+  appendLine('<div class="line out-text">Download resume: <a style="color:#caffc9" href="' + profile.resumePath + '" target="_blank">PDF</a></div>');
+}
+
+/* Map tab name to function */
+const tabActions = {
+  about: showAbout,
+  resume: showResume,
+  skills: showSkills,
+  projects: showProjects,
+  contact: showContact
+};
+
+/* Initial sequence: start with typing the staged boot messages */
+function initialSequence(){
+  
+  const bootMessages = [
+    "Initiating Search for the best candidate match...",
+    "Match identified successfully [OK]...",
+    "Loading profile: " + profile.name +"..."
+  ];
+
+  // 1. Adjust styles for multi-line sequential boot
+  bootContainer.style.top = '15%'; // Move it closer to the top
+  bootContainer.style.transform = 'translateX(-50%)'; // Only center horizontally
+  bootContainer.style.textAlign = 'left'; 
+  bootContainer.style.width = 'fit-content';
+  bootContainer.style.fontSize = '18px';
+  
+  // Helper function to recursively type the sequence
+  const typeSequence = (index) => {
+    if (index < bootMessages.length) {
+      
+      // Type the current message into a new line element
+      typeBootLine(bootContainer, bootMessages[index], 50, () => {
+        // Use a slight delay before typing the next part
+        setTimeout(() => typeSequence(index + 1), 700);
+      });
+    } else {
+      // Sequence finished: transition to main terminal
+      // Wait for 1 second before fading in the main terminal
+      setTimeout(() => {
+        bootContainer.style.display = 'none';
+        terminalContent.style.transition = 'opacity 1s ease-in-out';
+        terminalContent.style.opacity = 1;
+        
+        // Run the original terminal startup sequence after a short delay
+        setTimeout(runTerminalStartup, 600);
+      }, 1000); 
+    }
+  };
+  
+  typeSequence(0); // Start the sequence
+}
+
+function runTerminalStartup() {
+  // Clear the placeholder text for the main startup line
+  document.querySelector('.line .cmd').textContent = "init --profile murad"; 
+  
+  // Fade-in banner
+  banner.style.opacity = 0.0;
+  banner.style.transform = 'translateY(-6px)';
+  setTimeout(()=>{ banner.style.transition='all 420ms ease'; banner.style.opacity=1; banner.style.transform='none' }, 120);
+
+  // Type "Initializing profile" with main cursor
+  typeText(introOutput, "Initializing profile... [OK]", 28, ()=>{
+    // after init, show about automatically
+    setTimeout(()=>{ setActiveTab('about'); }, 600);
+  });
+}
+
+/* Set active tab UI & run content */
+function setActiveTab(name){
+  tabs.forEach(t=>{
+    if(t.dataset.tab === name) t.classList.add('active'); else t.classList.remove('active');
+  });
+  // clear prior dynamic output header lines but keep history
+  // run mapped action
+  if(tabActions[name]) tabActions[name]();
+}
+
+/* Update the permanently displayed command line text */
+function updateInputDisplay(text){
+    commandTypingArea.textContent = escapeHtml(text);
+    // Ensure we scroll to the bottom to see the cursor
+    output.scrollTop = output.scrollHeight;
+}
+
+/* Keyboard "command" input emulation (basic) */
+let commandBuffer = "";
+document.addEventListener('keydown', (e)=>{
+  // allow simple text capture when terminal focused
+  if(e.key === "Tab") { e.preventDefault(); return; }
+  if(e.key === "Escape"){ commandBuffer = ""; updateInputDisplay(commandBuffer); return; }
+  
+  if(e.key === "Enter"){
+    const cmd = commandBuffer.trim().toLowerCase();
+    
+    if(!cmd) {
+        commandBuffer = "";
+        updateInputDisplay(commandBuffer); 
+        return;
+    }
+    
+    commandBuffer = ""; // Clear buffer before handling
+    handleCommand(cmd);
+    return;
+  }
+  
+  // backspace
+  if(e.key === "Backspace"){
+    commandBuffer = commandBuffer.slice(0,-1);
+    updateInputDisplay(commandBuffer); 
+    return;
+  }
+  
+  // printable chars (check for key length 1 prevents modifiers like Shift/Ctrl/Alt from adding to buffer)
+  if(e.key.length === 1){
+    commandBuffer += e.key;
+    updateInputDisplay(commandBuffer);
+  }
+});
+
+/* handle simple commands */
+function handleCommand(cmd){
+  // 1. Move the command from the input line to the history (dynamic area)
+  appendLine('<span class="prompt">> </span><span class="cmd">' + escapeHtml(cmd) + '</span>');
+  
+  // 2. Clear the input line (done by updateInputDisplay when called after processing)
+  updateInputDisplay("");
+
+  // 3. Process the command
+  if(cmd === 'help'){
+    appendLine('<div class="out-text">Commands: help, show about, open resume, list skills, show projects, contact</div>');
+  } else if(cmd === 'about' || cmd.includes('show about')){
+      setActiveTab('about');
+  } else if(cmd === 'resume' || cmd.includes('open resume')){
+      setActiveTab('resume');
+  } else if(cmd === 'skills' || cmd.includes('list skills')){
+      setActiveTab('skills');
+  } else if(cmd === 'projects' || cmd.includes('show projects')){
+      setActiveTab('projects');
+  } else if(cmd === 'contact'){
+      setActiveTab('contact');
+  } else if(cmd === 'whoami' || cmd === 'who am i'){
+      appendLine('<div class="out-text">I am ' + profile.name + ' — ' + profile.title + '</div>');
+  } else {
+    appendLine('<div class="out-text">Command not found: ' + escapeHtml(cmd) + '  (type "help")</div>');
+  }
+}
+
+/* NEW TAB CLICK HANDLER: Using event delegation */
+tabsContainer.addEventListener('click', (e) => {
+    // Find the closest parent element that has the class 'tab'
+    const clickedTab = e.target.closest('.tab'); 
+    
+    if (clickedTab) {
+        const target = clickedTab.dataset.tab;
+        setActiveTab(target);
+        
+        // Emulate typing the command to the output history
+        handleCommand(target);
+    }
+});
+
+
+/* Start */
+initialSequence();
+
+/* Accessibility: make output focusable and show focus outline */
+output.addEventListener('focus', ()=>{ output.style.outline = '2px solid rgba(124,252,0,0.06)';});
+output.addEventListener('blur', ()=>{ output.style.outline = 'none';});
+
+// Dynamic 100vh fix for mobile browsers
+function setVhProperty() {
+  let vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+setVhProperty();
+window.addEventListener('resize', setVhProperty);
+</script>
+</body>
+</html>
